@@ -4,19 +4,23 @@ library(tidyverse)
 
 source("helpers.R")
 
-# Define UI for application that draws a histogram
+# Define UI for application 
 ui <- fluidPage(
-
-  h1("Correlation Exploration"),
+  
+  # Create a page title and layout ----
+  h2("Correlation Exploration"),
   sidebarLayout(
+    
+    # Add widgets to the sidebar ----
     sidebarPanel(
       h2("Select Variables to Find Correlation:"),
       
+      # Add two select boxes to pick variables for plotting/correlation----
       selectInput(
         inputId = 'corr_x',
         label = 'x Variable',
         choices = numeric_vars,
-        selected = "JWMNP",
+        selected = 'PINCP',
         selectize = T
       ),
       
@@ -24,14 +28,13 @@ ui <- fluidPage(
         inputId = 'corr_y',
         label = 'y Variable',
         choices = numeric_vars,
-        selected = 'PINCP',
+        selected = 'JWMNP',
         selectize = T
       ),
       
-      br(),
-      
       h2('Choose a subset of the data:'),
       
+      # Add three radio buttons to choose how to subset the data ----
       radioButtons(
         inputId = 'hhl_corr',
         label = 'Household Language',
@@ -59,6 +62,7 @@ ui <- fluidPage(
       
       h2("Select a Sample Size"),
       
+      # Add a slider for selecting the sample size ----
       sliderInput(
         inputId = 'corr_n',
         label = '',
@@ -67,11 +71,13 @@ ui <- fluidPage(
         value = 20
       ),
       
+      # Add an action button for grabbing a sample ----
       actionButton("corr_sample","Get a Sample!")
     ),
     
+    # Add scatter plot output and correlation coefficient guessing game to main panel ----
+    # coefficient guessing game is conditional on action button 'corr_sample' having been clicked ----
     mainPanel(
-      textOutput('title'),
       plotOutput('scatter'),
       conditionalPanel('input.corr_sample',
                        h2("Guess the correlation!"),
@@ -90,9 +96,11 @@ ui <- fluidPage(
   )
 )
 
+
+# Load the data ----
 my_sample <- readRDS("my_sample_temp.rds")
 
-# Define server logic required to draw a histogram
+# Define server logic required for application
 server <- function(input, output, session) {
 
     
@@ -142,7 +150,7 @@ server <- function(input, output, session) {
     # ##############################################################
     # #Uncomment the next large block of code to go in an
     # #observeEvent() to look for the action button (corr_sample)
-    # #Note you can highlight and bulk comment/uncomment (ctrl+shift+c or similar on mac)
+ 
     
     observeEvent(input$corr_sample, {
       if(input$hhl_corr == "all"){
@@ -202,27 +210,22 @@ server <- function(input, output, session) {
       sample_corr$corr_data <- subsetted_data[index,]
       sample_corr$corr_truth <- cor(sample_corr$corr_data |> select(corr_vars))[1,2]
       
-      output$scatter <- renderPlot({
-        validate(
-          need(!is.null(sample_corr$corr_data), "Please select your variables, subset, and click the 'Get a Sample!' button.")
-        )
-        ggplot(sample_corr$corr_data, aes_string(x = isolate(input$corr_x), y = isolate(input$corr_y))) +
-          geom_point()
-      })
-      
+    })
+    
+    # Check if sample_corr$corr_data has data, which it should only have if the action button for choosing a sample has been clicked by the user ----
+    # If no, then reveal text asking user to select variables, subsets, and action button ----
+    # If yes, then create a scatter plot ----
+    output$scatter <- renderPlot({
+      validate(
+        need(!is.null(sample_corr$corr_data), "Please select your variables, subset, and click the 'Get a Sample!' button.")
+      )
+      ggplot(sample_corr$corr_data, aes_string(x = isolate(input$corr_x), y = isolate(input$corr_y))) +
+        geom_point()
     })
     
     
-  
-   
-    # #Create a renderPlot() object to output a scatter plot
-    # #Use the code below to validate that data exists, (this goes in the renderPlot and you'll need 
-    # #to install the shinyalert package if you don't have it) and then create the appropriate
-    # #scatter plot
-      
 
-
-    #This code does the correlation guessing game! Nothign to change here
+    #This code does the correlation guessing game! Nothing to change here
     observeEvent(input$corr_submit, {
       close <- abs(input$corr_guess - sample_corr$corr_truth) <= .05
       if(close){
@@ -243,13 +246,7 @@ server <- function(input, output, session) {
       }
     })
     
-    output$title <- reactive({
-      if (input$corr_sample) {
-        ''
-      } else {
-        "Please select your variables, subset, and click the 'Get a Sample!' button."
-      }
-    })
+    
     
 }
 
